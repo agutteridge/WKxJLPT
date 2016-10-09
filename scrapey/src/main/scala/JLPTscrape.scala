@@ -1,7 +1,7 @@
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
-import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
+//import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
 import net.ruippeixotog.scalascraper.model.Element
 import java.sql.DriverManager
 import java.sql.Connection
@@ -10,8 +10,8 @@ import org.postgresql.util.PSQLException
 
 class JLPTscrape {
 
+  // connect to the database named "jlpt" on the localhost
   def setUpConnection(): Connection = {
-    // connect to the database named "jlpt" on the localhost
     val driver = "org.postgresql.Driver"
     val url = "jdbc:postgresql://localhost/jlpt"
     val username = "alicegutteridge"
@@ -30,13 +30,13 @@ class JLPTscrape {
     }
 
     if (conn != null) {
-      return conn
+      conn
     } else {
       throw new Exception("Error in setUpConnection")
     }
   }
 
-  def createTable(conn: Connection) = {
+  def createTable(conn: Connection): Unit = {
     val statement = conn.createStatement()
 
     // if vocab table exists, drop table
@@ -46,7 +46,7 @@ class JLPTscrape {
         |WHERE table_schema='public'
         |AND table_type='BASE TABLE';""".stripMargin)
     while (listOfTables.next()) {
-      if(listOfTables.getString("table_name") == "vocab") {
+      if (listOfTables.getString("table_name") == "vocab") {
         statement.executeQuery("DROP TABLE vocab")
       }
     }
@@ -62,7 +62,29 @@ class JLPTscrape {
         |);""".stripMargin)
   }
 
-  def run {
+  def createJLPTrow(wordElement: Element): JLPTrow = {
+    val kanji: String = wordElement >> text(".text")
+    val furigana: String = wordElement >> text(".furigana")
+    val jlptLevelString: String = wordElement >> text(".concept_light-tag label")
+    val jlptLevel: Integer = jlptLevelString.toCharArray.last.toInt
+    val meanings = ???
+    val jishoURL = ???
+
+    new JLPTrow(kanji, furigana, jlptLevel, meanings, jishoURL)
+  }
+
+  // Insert row into db
+  //TODO: put into DB
+  def insertRow(conn: Connection, j: JLPTrow): Boolean = {
+    val statement = conn.createStatement()
+    val resultSet = statement.executeQuery("SELECT * FROM vocab")
+    while (resultSet.next()) {
+      val word = resultSet.getString("word")
+      println(word)
+    }
+  }
+
+  def run: Unit = {
     val browser = JsoupBrowser()
     var conn: Connection = null
 
@@ -76,33 +98,12 @@ class JLPTscrape {
         createTable(conn)
 
         val doc = browser.get(url)
-        // TODO: rename var to represent which elements are in this div
-        val allDivs: List[Element] = doc >> elementList("div .concept_light-representation")
-        /* TODO: Extract more elements useful for db. These are:
-           - JLPT level
-           - Reading
-           - Meaning(s)
-           - Link to jisho page
-        */
+        val allWords: List[Element] = doc >> elementList("div .concept_light-representation")
 
         // An empty list indicates there are no more results
-        if (allDivs.nonEmpty) {
-          val kanjiDivs: List[Option[Element]] = allDivs.map(_ >?> element(".text"))
-          for (k <- kanjiDivs) {
-            k match {
-              case Some(s) => println(s.text)
-              case None => // do nothing
-            }
-
-            //TODO: put into DB
-            // Insert row into db
-            val statement = conn.createStatement()
-            val resultSet = statement.executeQuery("SELECT * FROM vocab")
-            while (resultSet.next()) {
-              val word = resultSet.getString("word")
-              println(word)
-            }
-          }
+        for (w <- allWords) {
+          val row = createJLPTrow(w)
+          val success = insertRow(conn, row)
         }
       } catch {
         case notFound: org.jsoup.HttpStatusException => println(notFound)
@@ -110,12 +111,12 @@ class JLPTscrape {
           println("Problem with connection.")
           psql.printStackTrace()
         case default: Throwable => default.printStackTrace()
-
       } finally {
         conn.close()
       }
     }
   }
+}
 
 object JLPTscrape extends App {
   val jlptInstance = new JLPTscrape
