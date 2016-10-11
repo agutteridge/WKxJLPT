@@ -62,20 +62,32 @@ class JLPTscrape {
         |);""".stripMargin)
   }
 
+  def concatMeanings(wordElement: Element): String = {
+    val meanings: List[Element] = wordElement >> elementList(".meaning-meaning")
+    val meaningsList: List[String] = meanings.map(_ >> text(".meaning-meaning"))
+      .distinct // Meanings should be unique
+    val numberList = Range(1, meaningsList.length).toList // Creates list of numbers
+      .map(x => x.toString + ". ")
+      .zip(meaningsList.map(m => m + "\n")) // Zips numbers with meanings
+      .flatMap(t => List(t._1, t._2)) // Flattens list of tuples to single-level list
+      .reduce((x, y) => x + y) // Concatenates all elements oflist
+    numberList.toString.trim() // Get rid of trailing newline
+  }
+
   def createJLPTrow(wordElement: Element): JLPTrow = {
     val kanji: String = wordElement >> text(".text")
     val furigana: String = wordElement >> text(".furigana")
     val jlptLevelString: String = wordElement >> text(".concept_light-tag label")
     val jlptLevel: Integer = jlptLevelString.toCharArray.last.toInt
-    val meanings = ???
-    val jishoURL = ???
+    val meanings: String = concatMeanings(wordElement)
+    val jishoURL = "" //TODO
 
     new JLPTrow(kanji, furigana, jlptLevel, meanings, jishoURL)
   }
 
   // Insert row into db
   //TODO: put into DB
-  def insertRow(conn: Connection, j: JLPTrow): Boolean = {
+  def insertRow(conn: Connection, j: JLPTrow): Unit = {
     val statement = conn.createStatement()
     val resultSet = statement.executeQuery("SELECT * FROM vocab")
     while (resultSet.next()) {
@@ -95,10 +107,10 @@ class JLPTscrape {
       try {
         // Set up connection and create vocab table
         conn = setUpConnection()
-        createTable(conn)
+//        createTable(conn)
 
         val doc = browser.get(url)
-        val allWords: List[Element] = doc >> elementList("div .concept_light-representation")
+        val allWords: List[Element] = doc >> elementList("div .concept_light")
 
         // An empty list indicates there are no more results
         for (w <- allWords) {

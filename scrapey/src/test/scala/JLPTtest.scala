@@ -5,17 +5,15 @@ import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
 import net.ruippeixotog.scalascraper.model.Element
 import org.scalatest._
 
-import scala.collection.mutable.Stack
-
 class JLPTtest extends FlatSpec with Matchers {
-  "GetFurigana" should "return the expected output てんのう" in {
+  "ConcatMeanings" should "return the expected output" in {
     val browser = JsoupBrowser()
     val doc = browser.parseFile("/Users/alicegutteridge/Dev/WKxJLPT/scrapey/src/test/resources/JishoExample.html")
-    val allWords: List[Element] = doc >> elementList("div .concept_light-representation")
-
+    // TODO this should be in test as well
+    val allWords: List[Element] = doc >> elementList("div .concept_light")
     val jlptInstance = new JLPTscrape
-    val result = ???
+    val result = jlptInstance.concatMeanings(allWords(0))
 
-    result should equal ("てんのう")
+    result should equal ("1. Emperor of Japan\n2. Tennou")
   }
 }
