@@ -62,6 +62,16 @@ class JLPTscrape {
         |);""".stripMargin)
   }
 
+  def getJLPTlevel(wordElement: Element): Integer = {
+    val fullString: String = wordElement >> text(".concept_light-status")
+    val jlptPattern = """.*JLPT N(\d).*""".r
+    val jlptLevel: Integer = fullString match {
+      case jlptPattern(level) => level.toInt
+      case _ => 0
+    }
+    jlptLevel
+  }
+
   def concatMeanings(wordElement: Element): String = {
     val meanings: List[Element] = wordElement >> elementList(".meaning-meaning")
     val meaningsList: List[String] = meanings.map(_ >> text(".meaning-meaning"))
@@ -77,10 +87,9 @@ class JLPTscrape {
   def createJLPTrow(wordElement: Element): JLPTrow = {
     val kanji: String = wordElement >> text(".text")
     val furigana: String = wordElement >> text(".furigana")
-    val jlptLevelString: String = wordElement >> text(".concept_light-tag label")
-    val jlptLevel: Integer = jlptLevelString.toCharArray.last.toInt
+    val jlptLevel: Integer = getJLPTlevel(wordElement)
     val meanings: String = concatMeanings(wordElement)
-    val jishoURL = "" //TODO
+    val jishoURL: String = wordElement >> element(".light-details_link") >> attr("href")("a")
 
     new JLPTrow(kanji, furigana, jlptLevel, meanings, jishoURL)
   }
@@ -99,33 +108,30 @@ class JLPTscrape {
   def run: Unit = {
     val browser = JsoupBrowser()
     var conn: Connection = null
-
-    // Iterate through levels N1 - N5
-    for (level <- 1 to 5) {
-      val url: String = s"http://jisho.org/search/%20%23jlpt-n$level"
-      // TODO: iterate through pages until no results on page
-      try {
-        // Set up connection and create vocab table
-        conn = setUpConnection()
+    // searching for level 1 returns words from all levels including JLPT-N1 (most advanced level)
+    val url: String = s"http://jisho.org/search/%20%23jlpt-n1"
+    // TODO: iterate through pages until no results on page
+    try {
+      // Set up connection and create vocab table
+      conn = setUpConnection()
 //        createTable(conn)
 
-        val doc = browser.get(url)
-        val allWords: List[Element] = doc >> elementList("div .concept_light")
+      val doc = browser.get(url)
+      val allWords: List[Element] = doc >> elementList("div .concept_light")
 
-        // An empty list indicates there are no more results
-        for (w <- allWords) {
-          val row = createJLPTrow(w)
-          val success = insertRow(conn, row)
-        }
-      } catch {
-        case notFound: org.jsoup.HttpStatusException => println(notFound)
-        case psql: PSQLException =>
-          println("Problem with connection.")
-          psql.printStackTrace()
-        case default: Throwable => default.printStackTrace()
-      } finally {
-        conn.close()
+      // An empty list indicates there are no more results
+      for (w <- allWords) {
+        val row = createJLPTrow(w)
+        val success = insertRow(conn, row)
       }
+    } catch {
+      case notFound: org.jsoup.HttpStatusException => println(notFound)
+      case psql: PSQLException =>
+        println("Problem with connection.")
+        psql.printStackTrace()
+      case default: Throwable => default.printStackTrace()
+    } finally {
+      conn.close()
     }
   }
 }
