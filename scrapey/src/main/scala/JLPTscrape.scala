@@ -5,7 +5,7 @@ import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.model.Element
 import java.sql.DriverManager
 import java.sql.Connection
-
+import scala.collection.mutable.ListBuffer
 import org.postgresql.util.PSQLException
 
 class JLPTscrape {
@@ -36,30 +36,54 @@ class JLPTscrape {
     }
   }
 
-  def createTable(conn: Connection): Unit = {
+  def listTables(conn: Connection): List[String] = {
     val statement = conn.createStatement()
 
-    // if vocab table exists, drop table
     val listOfTables = statement.executeQuery(
       """SELECT table_name
         |FROM information_schema.tables
         |WHERE table_schema='public'
         |AND table_type='BASE TABLE';""".stripMargin)
+
+    val resultList = new ListBuffer[String]()
+
     while (listOfTables.next()) {
-      if (listOfTables.getString("table_name") == "vocab") {
-        statement.executeQuery("DROP TABLE vocab")
-      }
+      resultList += listOfTables.getString("table_name")
     }
 
+    statement.close()
+    resultList.toList
+  }
+
+  def createTable(conn: Connection): Unit = {
+    // if vocab table exists, drop table
+    val selectStatement = conn.createStatement()
+    val listOfTables = selectStatement.executeQuery(
+      """SELECT table_name
+        |FROM information_schema.tables
+        |WHERE table_schema='public'
+        |AND table_type='BASE TABLE';""".stripMargin)
+
+    while (listOfTables.next()) {
+      if (listOfTables.getString("table_name") == "vocab") {
+        val dropStatement = conn.createStatement()
+        println("Dropping vocab table...")
+        dropStatement.executeUpdate("DROP TABLE vocab")
+        dropStatement.close()
+      }
+    }
+    selectStatement.close()
+
     // create vocab table
-    statement.executeQuery(
+    val createStatement = conn.createStatement()
+    createStatement.executeUpdate(
       """CREATE TABLE vocab (
         |kanji      varchar(10)   PRIMARY KEY,
         |furigana   varchar(80)   NOT NULL,
         |jlpt       int           NOT NULL,
         |meanings   varchar(250)  NOT NULL,
-        |jisho_url  varchar(80)   NOT NULL
-        |);""".stripMargin)
+        |jisho_url  varchar(80)   NOT NULL);""".stripMargin)
+    createStatement.close()
   }
 
   def getJLPTlevel(wordElement: Element): Integer = {
