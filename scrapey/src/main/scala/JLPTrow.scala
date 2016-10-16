@@ -1,5 +1,5 @@
 trait Row {
-  // Nothing needed yet, maybe string escape for URL?
+  // Nothing needed yet, maybe string escape for URL? and also newlines in meanings
 }
 
 class JLPTrow(val kanji: String,

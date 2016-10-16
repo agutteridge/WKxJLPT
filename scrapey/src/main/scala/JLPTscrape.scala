@@ -1,7 +1,5 @@
-import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
-//import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
 import net.ruippeixotog.scalascraper.model.Element
 import java.sql.DriverManager
 import java.sql.Connection
@@ -119,44 +117,54 @@ class JLPTscrape {
   }
 
   // Insert row into db
-  //TODO: put into DB
-  def insertRow(conn: Connection, j: JLPTrow): Unit = {
+  def insertRow(conn: Connection, jrow: JLPTrow): Unit = {
+    val kanji = jrow.kanji
+    val furigana = jrow.furigana
+    val jlpt = jrow.jlptLevel
+    val meanings = jrow.meanings
+    val url = jrow.jishoURL
+
     val statement = conn.createStatement()
-    val resultSet = statement.executeQuery("SELECT * FROM vocab")
-    while (resultSet.next()) {
-      val word = resultSet.getString("word")
-      println(word)
-    }
+    val sqlString = s"""INSERT INTO vocab VALUES
+                        |('$kanji',
+                        |'$furigana',
+                        |'$jlpt',
+                        |'$meanings',
+                        |'$url')""".stripMargin
+
+    statement.executeUpdate(sqlString)
   }
 
   def run: Unit = {
-    val browser = JsoupBrowser()
-    var conn: Connection = null
     // searching for level 1 returns words from all levels including JLPT-N1 (most advanced level)
-    val url: String = s"http://jisho.org/search/%20%23jlpt-n1"
-    // TODO: iterate through pages until no results on page
+    val url: String = s"http://jisho.org/search/%20%23jlpt-n1?page="
+    val jishoIterator = new JishoIterator(url)
+    var conn: Connection = null
+
     try {
       // Set up connection and create vocab table
       conn = setUpConnection()
-//        createTable(conn)
+      createTable(conn)
 
-      val doc = browser.get(url)
-      val allWords: List[Element] = doc >> elementList("div .concept_light")
+      while (jishoIterator.hasNext) {
+        val allWords: List[Element] = jishoIterator.next >> elementList("div .concept_light")
 
-      // An empty list indicates there are no more results
-      for (w <- allWords) {
-        val row = createJLPTrow(w)
-        val success = insertRow(conn, row)
+        for (w <- allWords) {
+          val row = createJLPTrow(w)
+          insertRow(conn, row)
+        }
       }
-    } catch {
-      case notFound: org.jsoup.HttpStatusException => println(notFound)
-      case psql: PSQLException =>
+
+      } catch {
+        case notFound: org.jsoup.HttpStatusException => println(notFound)
+        case psql: PSQLException =>
         println("Problem with connection.")
         psql.printStackTrace()
-      case default: Throwable => default.printStackTrace()
-    } finally {
-      conn.close()
-    }
+        case default: Throwable => default.printStackTrace()
+      } finally {
+        conn.close()
+      }
+    println("All words added to database")
   }
 }
 
