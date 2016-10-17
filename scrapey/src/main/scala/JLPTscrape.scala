@@ -1,60 +1,14 @@
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.model.Element
-import java.sql.DriverManager
 import java.sql.Connection
-import scala.collection.mutable.ListBuffer
 import org.postgresql.util.PSQLException
 
-class JLPTscrape {
+/* Inherits setUpConnection and listTables */
+class JLPTscrape extends usesPostgresJDBC {
 
-  // connect to the database named "jlpt" on the localhost
-  def setUpConnection(): Connection = {
-    val driver = "org.postgresql.Driver"
-    val url = "jdbc:postgresql://localhost/jlpt"
-    val username = "alicegutteridge"
-    val password = "root"
-
-    var conn: Connection = null
-
-    try {
-      Class.forName(driver)
-      conn = DriverManager.getConnection(url, username, password)
-    } catch {
-      case cnf: ClassNotFoundException =>
-        println("Driver not loaded properly.")
-        cnf.printStackTrace()
-      case default: Throwable => default.printStackTrace()
-    }
-
-    if (conn != null) {
-      conn
-    } else {
-      throw new Exception("Error in setUpConnection")
-    }
-  }
-
-  def listTables(conn: Connection): List[String] = {
-    val statement = conn.createStatement()
-
-    val listOfTables = statement.executeQuery(
-      """SELECT table_name
-        |FROM information_schema.tables
-        |WHERE table_schema='public'
-        |AND table_type='BASE TABLE';""".stripMargin)
-
-    val resultList = new ListBuffer[String]()
-
-    while (listOfTables.next()) {
-      resultList += listOfTables.getString("table_name")
-    }
-
-    statement.close()
-    resultList.toList
-  }
-
+  // Creates vocab table
   def createTable(conn: Connection): Unit = {
-    // if vocab table exists, drop table
     val selectStatement = conn.createStatement()
     val listOfTables = selectStatement.executeQuery(
       """SELECT table_name
@@ -62,6 +16,7 @@ class JLPTscrape {
         |WHERE table_schema='public'
         |AND table_type='BASE TABLE';""".stripMargin)
 
+    // if vocab table exists, drop table
     while (listOfTables.next()) {
       if (listOfTables.getString("table_name") == "vocab") {
         val dropStatement = conn.createStatement()
@@ -72,11 +27,10 @@ class JLPTscrape {
     }
     selectStatement.close()
 
-    // create vocab table
     val createStatement = conn.createStatement()
     createStatement.executeUpdate(
       """CREATE TABLE vocab (
-        |kanji      varchar(10)   PRIMARY KEY,
+        |full_word      varchar(10)   PRIMARY KEY,
         |furigana   varchar(80)   NOT NULL,
         |jlpt       int           NOT NULL,
         |meanings   varchar(250)  NOT NULL,
@@ -84,6 +38,7 @@ class JLPTscrape {
     createStatement.close()
   }
 
+  // Extracts JLPT level from text in HTML document
   def getJLPTlevel(wordElement: Element): Integer = {
     val fullString: String = wordElement >> text(".concept_light-status")
     val jlptPattern = """.*JLPT N(\d).*""".r
@@ -94,6 +49,7 @@ class JLPTscrape {
     jlptLevel
   }
 
+  // Formats meanings so that they are numbered, and separated by newlines
   def concatMeanings(wordElement: Element): String = {
     val meanings: List[Element] = wordElement >> elementList(".meaning-meaning")
     val meaningsList: List[String] = meanings.map(_ >> text(".meaning-meaning"))
@@ -106,19 +62,20 @@ class JLPTscrape {
     numberList.toString.trim() // Get rid of trailing newline
   }
 
+  // Instantiates JLPTrow object
   def createJLPTrow(wordElement: Element): JLPTrow = {
-    val kanji: String = wordElement >> text(".text")
+    val fullWord: String = wordElement >> text(".text")
     val furigana: String = wordElement >> text(".furigana")
     val jlptLevel: Integer = getJLPTlevel(wordElement)
     val meanings: String = concatMeanings(wordElement)
     val jishoURL: String = wordElement >> element(".light-details_link") >> attr("href")("a")
 
-    new JLPTrow(kanji, furigana, jlptLevel, meanings, jishoURL)
+    new JLPTrow(fullWord, furigana, jlptLevel, meanings, jishoURL)
   }
 
   // Insert row into db
   def insertRow(conn: Connection, jrow: JLPTrow): Unit = {
-    val kanji = jrow.kanji
+    val fullWord = jrow.fullWord
     val furigana = jrow.furigana
     val jlpt = jrow.jlptLevel
     val meanings = jrow.meanings
@@ -126,7 +83,7 @@ class JLPTscrape {
 
     val statement = conn.createStatement()
     val sqlString = s"""INSERT INTO vocab VALUES
-                        |('$kanji',
+                        |('$fullWord',
                         |'$furigana',
                         |'$jlpt',
                         |'$meanings',
@@ -155,20 +112,20 @@ class JLPTscrape {
         }
       }
 
-      } catch {
-        case notFound: org.jsoup.HttpStatusException => println(notFound)
-        case psql: PSQLException =>
+    } catch {
+      case notFound: org.jsoup.HttpStatusException => println(notFound)
+      case psql: PSQLException =>
         println("Problem with connection.")
         psql.printStackTrace()
-        case default: Throwable => default.printStackTrace()
-      } finally {
+      case default: Throwable => default.printStackTrace()
+    } finally {
         conn.close()
-      }
+    }
     println("All words added to database")
   }
 }
 
 object JLPTscrape extends App {
-  val jlptInstance = new JLPTscrape
-  jlptInstance.run
+  val jlptScrapeInstance = new JLPTscrape
+  jlptScrapeInstance.run
 }

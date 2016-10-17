@@ -42,7 +42,7 @@ class JLPTtest extends FlatSpec with Matchers with MockitoSugar {
     val jlptInstance = new JLPTscrape
     val result = jlptInstance.createJLPTrow(firstWord)
 
-    result.kanji should equal ("天皇")
+    result.fullWord should equal ("天皇")
     result.furigana should equal ("てんのう")
     result.jishoURL should equal ("http://jisho.org/word/%E5%A4%A9%E7%9A%87")
   }
@@ -71,7 +71,7 @@ class JLPTtest extends FlatSpec with Matchers with MockitoSugar {
     val statement = conn.createStatement()
     val result = statement.executeQuery("SELECT * FROM vocab")
     while (result.next()) {
-      result.getString("kanji") should be ("天皇")
+      result.getString("full_word") should be ("天皇")
       result.getString("furigana") should be ("てんのう")
       result.getString("meanings") should be ("1. Emperor of Japan\n2. Tennou")
       result.getInt("jlpt") should be (2)
