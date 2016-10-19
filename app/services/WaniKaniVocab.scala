@@ -2,6 +2,7 @@ import scalaj.http._
 import spray.json._
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
+import javax.inject._
 
 case class WkAll(requested_information: List[WkWord])
 
@@ -14,8 +15,9 @@ object WkJsonProtocol extends DefaultJsonProtocol {
 
 import WkJsonProtocol._
 
-class WaniKaniVocabulary {
+class WaniKaniVocabulary @Inject() (postgresConnection: TPostgresConnection) extends usesPostgresJDBC {
   val datetime = DateTime.now.toString
+  val conn = postgresConnection.conn
 
   def run: Unit = {
     val apiKey = ConfigFactory.load().getString("values.waniKaniAPIKey")

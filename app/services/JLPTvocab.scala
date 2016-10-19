@@ -5,7 +5,7 @@ import java.sql.Connection
 import org.postgresql.util.PSQLException
 
 /* Inherits setUpConnection and listTables */
-class JLPTscrape extends usesPostgresJDBC {
+class JLPTvocab extends usesPostgresJDBC {
 
   // Creates vocab table
   def createTable(conn: Connection): Unit = {
@@ -91,41 +91,4 @@ class JLPTscrape extends usesPostgresJDBC {
 
     statement.executeUpdate(sqlString)
   }
-
-  def run: Unit = {
-    // searching for level 1 returns words from all levels including JLPT-N1 (most advanced level)
-    val url: String = s"http://jisho.org/search/%20%23jlpt-n1?page="
-    val jishoIterator = new JishoIterator(url)
-    var conn: Connection = null
-
-    try {
-      // Set up connection and create vocab table
-      conn = setUpConnection()
-      createTable(conn)
-
-      while (jishoIterator.hasNext) {
-        val allWords: List[Element] = jishoIterator.next >> elementList("div .concept_light")
-
-        for (w <- allWords) {
-          val row = createJLPTrow(w)
-          insertRow(conn, row)
-        }
-      }
-
-    } catch {
-      case notFound: org.jsoup.HttpStatusException => println(notFound)
-      case psql: PSQLException =>
-        println("Problem with connection.")
-        psql.printStackTrace()
-      case default: Throwable => default.printStackTrace()
-    } finally {
-        conn.close()
-    }
-    println("All words added to database")
-  }
-}
-
-object JLPTscrape extends App {
-  val jlptScrapeInstance = new JLPTscrape
-  jlptScrapeInstance.run
 }

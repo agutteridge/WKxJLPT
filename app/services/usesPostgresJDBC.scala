@@ -1,35 +1,48 @@
 import java.sql.{Connection, DriverManager}
-
+import scala.concurrent.Future
+import javax.inject._
+import com.typesafe.config.ConfigFactory
+import play.api.inject.ApplicationLifecycle
 import scala.collection.mutable.ListBuffer
 
-class usesPostgresJDBC {
+trait TPostgresConnection {
+  val driver: String
+  val url: String
+  val username: String
+  val password: String
+  var conn: Connection
+}
 
-  // Connect to the database named "jlpt" on the localhost
-  def setUpConnection(): Connection = {
-    val driver = "org.postgresql.Driver"
-    val url = "jdbc:postgresql://localhost/jlpt"
-    val username = "alicegutteridge"
-    val password = "root"
+@Singleton
+class PostgresConnection @Inject() (lifecycle: ApplicationLifecycle) extends TPostgresConnection {
+  val driver = ConfigFactory.load().getString("db.jlpt.driver")
+  val url = ConfigFactory.load().getString("db.jlpt.url")
+  val username = ConfigFactory.load().getString("db.jlpt.username")
+  val password = ConfigFactory.load().getString("db.jlpt.password")
+  var conn: Connection = null
 
-    var conn: Connection = null
-
-    try {
-      Class.forName(driver)
-      conn = DriverManager.getConnection(url, username, password)
-    } catch {
-      case cnf: ClassNotFoundException =>
-        println("Driver not loaded properly.")
-        cnf.printStackTrace()
-      case default: Throwable => default.printStackTrace()
-    }
-
-    if (conn != null) {
-      conn
-    } else {
-      throw new Exception("Error in setUpConnection")
-    }
+  lifecycle.addStopHook { () =>
+    Future.successful(conn.close())
   }
 
+  try {
+    Class.forName(driver)
+    conn = DriverManager.getConnection(url, username, password)
+  } catch {
+    case cnf: ClassNotFoundException =>
+      println("Driver not loaded properly.")
+      cnf.printStackTrace()
+    case default: Throwable => default.printStackTrace()
+  }
+//
+//  if (conn != null) {
+//    conn
+//  } else {
+//    throw new Exception("Error in setUpConnection")
+//  }
+}
+
+class usesPostgresJDBC {
   // List all table names in database
   def listTables(conn: Connection): List[String] = {
     val statement = conn.createStatement()
