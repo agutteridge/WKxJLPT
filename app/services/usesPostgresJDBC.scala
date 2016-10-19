@@ -48,6 +48,26 @@ class PostgresConnection @Inject() (lifecycle: ApplicationLifecycle) extends TPo
 }
 
 class UsesPostgresJDBC {
+  def dropIfExists(conn: Connection, tableName: String): Unit = {
+    val selectStatement = conn.createStatement()
+    val listOfTables = selectStatement.executeQuery(
+      """SELECT table_name
+        |FROM information_schema.tables
+        |WHERE table_schema='public'
+        |AND table_type='BASE TABLE';""".stripMargin)
+
+    // if wanikani table exists, drop table
+    while (listOfTables.next()) {
+      if (listOfTables.getString("table_name") == tableName) {
+        val dropStatement = conn.createStatement()
+        println(s"Dropping $tableName table...")
+        dropStatement.executeUpdate(s"DROP TABLE $tableName")
+        dropStatement.close()
+      }
+    }
+    selectStatement.close()
+  }
+
   // List all table names in database
   def listTables(conn: Connection): List[String] = {
     val statement = conn.createStatement()

@@ -11,6 +11,7 @@ class PopulateVocabularyDatabase @Inject() (postgresConnection: TPostgresConnect
 
   def run: Unit = {
     val jv = new JLPTvocab // TODO use Guice
+    val wv = new WaniKaniVocab
 
     // searching for level 1 returns words from all levels including JLPT-N1 (most advanced level)
     val url: String = s"http://jisho.org/search/%20%23jlpt-n1?page="
@@ -26,7 +27,7 @@ class PopulateVocabularyDatabase @Inject() (postgresConnection: TPostgresConnect
         val allWords: List[Element] = jishoIterator.next >> elementList("div .concept_light")
 
         for (w <- allWords) {
-          val row = jv.createJLPTrow(w)
+          val row = new JLPTrow(w)
           jv.insertRow(conn, row)
         }
       }

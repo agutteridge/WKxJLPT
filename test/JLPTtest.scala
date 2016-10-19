@@ -23,31 +23,24 @@ class JLPTtest extends FlatSpec with Matchers with Inject {
   }
 
   "ConcatMeanings" should "return the expected output" in {
-    val jlptInstance = new JLPTvocab
-    val result = jlptInstance.concatMeanings(firstWord)
-
-    result should equal ("1. Emperor of Japan\n2. Tennou")
+    val jlptRow = new JLPTrow(firstWord)
+    jlptRow.meanings should equal ("1. Emperor of Japan\n2. Tennou")
   }
 
   "getJLPTlevel" should "return the expected output" in {
-    val jlptInstance = new JLPTvocab
-    val result = jlptInstance.getJLPTlevel(firstWord)
-
-    result should equal (2)
+    val jlptRow = new JLPTrow(firstWord)
+    jlptRow.jlptLevel should equal (2)
   }
 
   "Creating a JLPTrow instance" should "return the expected output" in {
-    val jlptInstance = new JLPTvocab
-    val result = jlptInstance.createJLPTrow(firstWord)
-
-    result.fullWord should equal ("天皇")
-    result.furigana should equal ("てんのう")
-    result.jishoURL should equal ("http://jisho.org/word/%E5%A4%A9%E7%9A%87")
+    val jlptRow = new JLPTrow(firstWord)
+    jlptRow.fullWord should equal ("天皇")
+    jlptRow.furigana should equal ("てんのう")
+    jlptRow.jishoURL should equal ("http://jisho.org/word/%E5%A4%A9%E7%9A%87")
   }
 
   "SetUpConnection" should "return a functioning connection to PostgreSQL" in {
     val conn = inject[PostgresConnection].get()
-
     conn.getCatalog should equal ("jlpt")
   }
 
@@ -55,7 +48,6 @@ class JLPTtest extends FlatSpec with Matchers with Inject {
     val jlptInstance = new JLPTvocab
     val conn = inject[PostgresConnection].get()
     jlptInstance.createTable(conn)
-
     jlptInstance.listTables(conn) should contain ("vocab")
   }
 
@@ -63,8 +55,8 @@ class JLPTtest extends FlatSpec with Matchers with Inject {
     val jlptInstance = new JLPTvocab
     val conn = inject[PostgresConnection].get()
     jlptInstance.createTable(conn)
-    val row = jlptInstance.createJLPTrow(firstWord)
-    jlptInstance.insertRow(conn, row)
+    val jlptRow = new JLPTrow(firstWord)
+    jlptInstance.insertRow(conn, jlptRow)
     val statement = conn.createStatement()
     val result = statement.executeQuery("SELECT * FROM vocab")
 
@@ -90,11 +82,11 @@ class JLPTtest extends FlatSpec with Matchers with Inject {
     iterator.hasNext should be (false)
   }
 
-  "WaniKaniVocab.run" should "return a String representation of the word two" in {
-    val waniKaniInstance = new WaniKaniVocab(inject[PostgresConnection])
-    val result = waniKaniInstance.run
-
-    result should be ("WkWord(二,に,two,1)")
-  }
+//  "WaniKaniVocab.run" should "return a String representation of the word two" in {
+//    val waniKaniInstance = new WaniKaniVocab(inject[PostgresConnection])
+//    val result = waniKaniInstance.run
+//
+//    result should be ("WkWord(二,に,two,1)")
+//  }
 }
 
