@@ -1,10 +1,13 @@
 import java.sql.Connection
 
-import net.ruippeixotog.scalascraper.model.Element
-import net.ruippeixotog.scalascraper.scraper.ContentExtractors._
 import org.postgresql.util.PSQLException
+import javax.inject._
+import net.ruippeixotog.scalascraper.dsl.DSL._
+import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
+import net.ruippeixotog.scalascraper.model.Element
 
-object PopulateVocabularyDatabase {
+
+class PopulateVocabularyDatabase @Inject() (postgresConnection: TPostgresConnection) {
 
   def run: Unit = {
     val jv = new JLPTvocab // TODO use Guice
@@ -16,15 +19,15 @@ object PopulateVocabularyDatabase {
 
     try {
       // Set up connection and create vocab table
-      conn = setUpConnection()
-      createTable(conn)
+      conn = postgresConnection.get()
+      jv.createTable(conn)
 
       while (jishoIterator.hasNext) {
         val allWords: List[Element] = jishoIterator.next >> elementList("div .concept_light")
 
         for (w <- allWords) {
-          val row = createJLPTrow(w)
-          insertRow(conn, row)
+          val row = jv.createJLPTrow(w)
+          jv.insertRow(conn, row)
         }
       }
 

@@ -2,11 +2,11 @@ import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.model.Element
 import java.sql.Connection
-import org.postgresql.util.PSQLException
 
 /* Inherits setUpConnection and listTables */
-class JLPTvocab extends usesPostgresJDBC {
+class JLPTvocab extends UsesPostgresJDBC {
 
+  // TODO: define schema in another file! Use Evolutions! Use Slick!
   // Creates vocab table
   def createTable(conn: Connection): Unit = {
     val selectStatement = conn.createStatement()

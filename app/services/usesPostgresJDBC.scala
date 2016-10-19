@@ -10,7 +10,7 @@ trait TPostgresConnection {
   val url: String
   val username: String
   val password: String
-  var conn: Connection
+  def get(): Connection
 }
 
 @Singleton
@@ -19,30 +19,35 @@ class PostgresConnection @Inject() (lifecycle: ApplicationLifecycle) extends TPo
   val url = ConfigFactory.load().getString("db.jlpt.url")
   val username = ConfigFactory.load().getString("db.jlpt.username")
   val password = ConfigFactory.load().getString("db.jlpt.password")
-  var conn: Connection = null
 
-  lifecycle.addStopHook { () =>
-    Future.successful(conn.close())
-  }
+  def get(): Connection = {
+    var conn: Connection = null
 
-  try {
-    Class.forName(driver)
-    conn = DriverManager.getConnection(url, username, password)
-  } catch {
-    case cnf: ClassNotFoundException =>
-      println("Driver not loaded properly.")
-      cnf.printStackTrace()
-    case default: Throwable => default.printStackTrace()
+    // Closes connection when the application stops
+    lifecycle.addStopHook { () =>
+      Future.successful(conn.close())
+    }
+
+    try {
+      Class.forName(driver)
+      conn = DriverManager.getConnection(url, username, password)
+    } catch {
+      case cnf: ClassNotFoundException =>
+        println("Driver not loaded properly.")
+        cnf.printStackTrace()
+      case default: Throwable => default.printStackTrace()
+    }
+
+    // Return the connection or throw an Exception
+    if (conn != null) {
+      conn
+    } else {
+      throw new Exception("Error in setUpConnection")
+    }
   }
-//
-//  if (conn != null) {
-//    conn
-//  } else {
-//    throw new Exception("Error in setUpConnection")
-//  }
 }
 
-class usesPostgresJDBC {
+class UsesPostgresJDBC {
   // List all table names in database
   def listTables(conn: Connection): List[String] = {
     val statement = conn.createStatement()

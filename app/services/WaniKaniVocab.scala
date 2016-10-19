@@ -15,22 +15,24 @@ object WkJsonProtocol extends DefaultJsonProtocol {
 
 import WkJsonProtocol._
 
-class WaniKaniVocabulary @Inject() (postgresConnection: TPostgresConnection) extends usesPostgresJDBC {
+class WaniKaniVocab @Inject() (postgresConnection: TPostgresConnection) extends UsesPostgresJDBC {
   val datetime = DateTime.now.toString
-  val conn = postgresConnection.conn
+  val conn = postgresConnection.get()
 
-  def run: Unit = {
+  def run: String = {
     val apiKey = ConfigFactory.load().getString("values.waniKaniAPIKey")
 
     // iterate through levels 1-60
-    for (level <- Range(1, 61)) {
+//    for (level <- Range(1, 61)) {
+    val level = 1
       val url = s"https://www.wanikani.com/api/user/$apiKey/vocabulary/$level"
       val response: HttpResponse[String] = Http(url).asString
       val json = response.body
       val jsonAst = json.parseJson
       val result = jsonAst.convertTo[WkAll]
       // TODO: add to database
-      println(result.requested_information(0))
+    println(result.requested_information(0).toString())
+      result.requested_information(0).toString()
     }
-  }
+//  }
 }
