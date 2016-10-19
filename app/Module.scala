@@ -15,7 +15,7 @@ import com.google.inject.AbstractModule
 class Module extends AbstractModule {
 
   override def configure() = {
-    // call WaniKaniVocabulary.run and JLPTscrape.run
+    // hello dependencies
   }
 
 }

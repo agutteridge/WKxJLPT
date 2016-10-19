@@ -1,4 +1,4 @@
-name := "play-scala"
+name := "wkxjlpt"
 
 version := "1.0-SNAPSHOT"
 

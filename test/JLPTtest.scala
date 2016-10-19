@@ -8,7 +8,7 @@ class JLPTtest extends FlatSpec with Matchers {
   // make into fixture or something ?
   def firstWord: Element = {
     val browser = JsoupBrowser()
-    val doc = browser.parseFile("/Users/alicegutteridge/Dev/WKxJLPT/scrapey/src/test/resources/JishoExample.html")
+    val doc = browser.parseFile("/Users/alicegutteridge/Dev/WKxJLPT/test/resources/JishoExample.html")
     val allWords: List[Element] = doc >> elementList("div .concept_light")
     allWords.head
   }
@@ -21,9 +21,6 @@ class JLPTtest extends FlatSpec with Matchers {
   }
 
   "getJLPTlevel" should "return the expected output" in {
-    val browser = JsoupBrowser()
-    val doc = browser.parseFile("/Users/alicegutteridge/Dev/WKxJLPT/scrapey/src/test/resources/JishoExample.html")
-    val allWords: List[Element] = doc >> elementList("div .concept_light")
     val jlptInstance = new JLPTscrape
     val result = jlptInstance.getJLPTlevel(firstWord)
 
@@ -31,9 +28,6 @@ class JLPTtest extends FlatSpec with Matchers {
   }
 
   "Creating a JLPTrow instance" should "return the expected output" in {
-    val browser = JsoupBrowser()
-    val doc = browser.parseFile("/Users/alicegutteridge/Dev/WKxJLPT/scrapey/src/test/resources/JishoExample.html")
-    val allWords: List[Element] = doc >> elementList("div .concept_light")
     val jlptInstance = new JLPTscrape
     val result = jlptInstance.createJLPTrow(firstWord)
 
