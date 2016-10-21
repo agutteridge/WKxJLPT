@@ -1,3 +1,5 @@
+package services
+
 import java.sql.{Connection, DriverManager}
 import scala.concurrent.Future
 import javax.inject._

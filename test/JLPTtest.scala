@@ -6,6 +6,8 @@ import org.scalatest._
 import play.api.inject.guice.GuiceApplicationBuilder
 import scala.reflect.ClassTag
 
+import services._
+
 /* SBT will not run test classes with args.
    Dependencies must be injected using GuiceApplicationBuilder.
 */
@@ -41,7 +43,7 @@ class JLPTtest extends FlatSpec with Matchers with Inject {
 
   "SetUpConnection" should "return a functioning connection to PostgreSQL" in {
     val conn = inject[PostgresConnection].get()
-    conn.getCatalog should equal ("jlpt")
+    conn.getCatalog should equal ("wkxjlpt")
   }
 
   "CreateTable" should "create vocab table in jlpt db" in {
@@ -62,9 +64,9 @@ class JLPTtest extends FlatSpec with Matchers with Inject {
 
     while (result.next()) {
       result.getString("full_word") should be ("天皇")
-      result.getString("furigana") should be ("てんのう")
-      result.getString("meanings") should be ("1. Emperor of Japan\n2. Tennou")
-      result.getInt("jlpt") should be (2)
+      result.getString("jisho_furigana") should be ("てんのう")
+      result.getString("jisho_meanings") should be ("1. Emperor of Japan\n2. Tennou")
+      result.getInt("jlpt_level") should be (2)
       result.getString("jisho_url") should be ("http://jisho.org/word/%E5%A4%A9%E7%9A%87")
     }
   }

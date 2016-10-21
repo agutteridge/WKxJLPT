@@ -1,3 +1,5 @@
+package services
+
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import net.ruippeixotog.scalascraper.model.Document
 import net.ruippeixotog.scalascraper.dsl.DSL._
@@ -18,7 +20,8 @@ class JishoIterator(val url: String) extends Iterator[Document] {
   }
 
   def next(): Document = {
-    val doc = browser.get(url.toString)
+    println("page is now: " + page)
+    val doc = browser.get(url + page.toString)
     page += 1
     doc
   }

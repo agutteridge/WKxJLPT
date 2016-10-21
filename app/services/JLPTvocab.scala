@@ -1,3 +1,5 @@
+package services
+
 import java.sql.Connection
 
 /* Inherits setUpConnection and listTables */
@@ -11,11 +13,11 @@ class JLPTvocab extends UsesPostgresJDBC {
     val createStatement = conn.createStatement()
     createStatement.executeUpdate(
       """CREATE TABLE vocab (
-        |full_word  varchar(20)   PRIMARY KEY,
-        |furigana   varchar(80)   NOT NULL,
-        |jlpt       int           NOT NULL,
-        |meanings   varchar(250)  NOT NULL,
-        |jisho_url  varchar(80)   NOT NULL);""".stripMargin)
+        |full_word        varchar(20)    PRIMARY KEY,
+        |jisho_furigana   varchar(80)    NOT NULL,
+        |jlpt_level       int            NOT NULL,
+        |jisho_meanings   varchar(1000)  NOT NULL,
+        |jisho_url        varchar(80)    NOT NULL);""".stripMargin)
     createStatement.close()
   }
 
@@ -35,6 +37,20 @@ class JLPTvocab extends UsesPostgresJDBC {
                         |'$meanings',
                         |'$url')""".stripMargin
 
-    statement.executeUpdate(sqlString)
+    try {
+      statement.executeUpdate(sqlString)
+      statement.closeOnCompletion()
+    } catch {
+//      case unknown: ArrayIndexOutOfBoundsException =>
+//        val noMeaning = s"""INSERT INTO vocab VALUES
+//                            |('$fullWord',
+//                            |'$furigana',
+//                            |'$jlpt',
+//                            |'',
+//                            |'$url')""".stripMargin
+//        conn.createStatement().executeUpdate(noMeaning)
+//        statement.closeOnCompletion()
+      case default: Exception => println(jrow.toString); throw default
+    }
   }
 }
